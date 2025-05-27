@@ -1,26 +1,43 @@
-<script setup lang="ts">
-import Versions from './components/Versions.vue'
-
-const ipcHandle = (): void => window.electron.ipcRenderer.send('ping')
-</script>
-
 <template>
-  <img alt="logo" class="logo" src="./assets/electron.svg" />
-  <div class="creator">Powered by electron-vite</div>
-  <div class="text">
-    Build an Electron app with
-    <span class="vue">Vue</span>
-    and
-    <span class="ts">TypeScript</span>
-  </div>
-  <p class="tip">Please try pressing <code>F12</code> to open the devTool</p>
-  <div class="actions">
-    <div class="action">
-      <a href="https://electron-vite.org/" target="_blank" rel="noreferrer">Documentation</a>
-    </div>
-    <div class="action">
-      <a target="_blank" rel="noreferrer" @click="ipcHandle">Send IPC</a>
-    </div>
-  </div>
-  <Versions />
+  <n-layout has-sider class="app-layout">
+    <n-layout-sider
+      bordered
+      collapse-mode="width"
+      :collapsed-width="150"
+      :width="300"
+      show-trigger
+      content-style="padding: 24px;"
+      :native-scrollbar="false"
+    >
+      <Sider />
+    </n-layout-sider>
+
+    <n-layout :native-scrollbar="false">
+      <n-layout-header bordered>
+        <Menunav />
+      </n-layout-header>
+
+      <n-layout-content content-style="padding: 24px;">
+        <RouterView />
+      </n-layout-content>
+
+      <n-layout-footer bordered> 成府路 </n-layout-footer>
+    </n-layout>
+  </n-layout>
 </template>
+
+<script setup lang="ts">
+import { NLayout, NLayoutHeader, NLayoutContent, NLayoutFooter, NLayoutSider } from 'naive-ui'
+import Menunav from './components/Menunav.vue'
+import Sider from './views/Sider.vue'
+</script>
+<style scoped>
+.app-layout {
+  height: 100vh;
+}
+
+.n-layout-header,
+.n-layout-footer {
+  padding: 24px;
+}
+</style>
