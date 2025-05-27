@@ -1,5 +1,8 @@
 <template>
   <n-card class="main-container" content-style="padding: 0; height: 100%;">
+    <p>
+      {{ leftSelectedDescriptions.join(' | ') }}
+    </p>
     <n-grid :cols="2" :x-gap="20" style="height: 100%">
       <!-- 左侧区域 -->
       <n-gi>
