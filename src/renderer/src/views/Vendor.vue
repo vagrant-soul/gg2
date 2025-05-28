@@ -35,19 +35,27 @@
                   </n-radio-group>
                 </n-form-item-gi>
                 <n-form-item-gi :span="12" label="稀 有 度 :" label-placement="left">
-                  <n-checkbox-group v-model:value="selectedRarity">
-                    <n-flex>
-                      <n-checkbox value="普通加班"> 普通 </n-checkbox>
-                      <n-checkbox value="魔法加班"> 魔法 </n-checkbox>
-                      <n-checkbox value="稀有加班"> 稀有 </n-checkbox>
+                  <!-- <n-checkbox-group :value="cities" @update:value="handleUpdateValue">
+                    <n-flex item-style="display: flex;" align="center">
+                      <n-checkbox value="Beijing" label="北京" />
+                      <n-checkbox value="Shanghai" label="上海" />
+                      <n-checkbox value="Guangzhou" label="广州" />
+                      <n-checkbox value="Shenzen" label="深圳" />
+                    </n-flex>
+                  </n-checkbox-group> -->
+                  <n-checkbox-group :value="selectedRarity" @update:value="handleUpdateRarity">
+                    <n-flex item-style="display: flex;" align="center">
+                      <n-checkbox value="稀" label="稀有" />
+                      <n-checkbox value="魔" label="魔法" />
+                      <n-checkbox value="中" label="普通" />
                     </n-flex>
                   </n-checkbox-group>
                 </n-form-item-gi>
                 <n-form-item-gi :span="8" label="腐化状态:" label-placement="left">
-                  <n-radio-group v-model:value="selectedCorrupted">
+                  <n-radio-group :value="selectedCorrupted" @update:value="handleUpdateCorrupted">
                     <n-flex>
-                      <n-radio value="corrupted">已腐化</n-radio>
-                      <n-radio value="uncorrupted">未腐化</n-radio>
+                      <n-radio value="已汙" label="已腐化"></n-radio>
+                      <n-radio value="!已汙" label="未腐化"></n-radio>
                     </n-flex>
                   </n-radio-group>
                 </n-form-item-gi>
@@ -86,9 +94,9 @@
                         <template #suffix> % </template>
                       </n-input-number>
                     </n-flex>
-                    <n-checkbox value="delirious">此區域玩家 #% 瘋癲</n-checkbox>
-                    <n-checkbox value="addpacks">區域含有額外 # 群怪物</n-checkbox>
-                    <n-checkbox value="zerogate">时空之门数量:0</n-checkbox>
+                    <n-checkbox value="瘋癲">此區域玩家 #% 瘋癲</n-checkbox>
+                    <n-checkbox value="有額外">區域含有額外 # 群怪物</n-checkbox>
+                    <n-checkbox value="數: 0">復活數: 0(字符串需要加""包裹)</n-checkbox>
                   </n-flex>
                 </n-checkbox-group>
               </n-form-item-gi>
@@ -191,12 +199,64 @@ import { NScrollbar, NList, NListItem, NInput } from 'naive-ui'
 import { ref, computed } from 'vue'
 // 导入waystone词缀部分数据
 import { waystoneRegex, WaystoneRegex } from '@generated/Waystone'
+import { useDebounceFn } from '@vueuse/core' // 导入防抖函数
+// 导入单据配置文件
+// import { rarityConfig } from './waystone/waystoneConfig'
+
 // --------topcard部分的定义开始
 // 匹配规则部分
 const selectedRule = ref('rule-or') // 设置默认值
-const selectedRarity = ref<string[]>([])
+//----- 按照模板,后续删除
+// const cities = ref<(string | number)[] | null>(null)
+// const handleUpdateValue = (value: (string | number)[]): void => {
+//   cities.value = value
+//   console.log('复选框组选中的数据:', value)
+//   console.log('citiesString 的值:', citiesString.value)
+// }
+// // 计算属性，将 cities 内容转换为字符串
+// const citiesString = computed(() => {
+//   if (cities.value) {
+//     return cities.value.join(',')
+//   }
+//   return ''
+// })
+
+//----- 按照模板测试,后续删除-- 结束
+
+//地图稀有度部分
+const selectedRarity = ref<(string | number)[] | null>(null)
+// 处理稀有度选择结果
+const handleUpdateRarity = (value: (string | number)[]): void => {
+  selectedRarity.value = value
+  // console.log('复选框组选中的数据:', value)
+  // console.log('tigerRegex 的值:', tigerRegex.value)
+}
+// 计算属性，合并优化地图稀有度字符串
+const tigerRegex = computed(() => {
+  if (!selectedRarity.value || selectedRarity.value.length === 0) return null
+
+  const types = selectedRarity.value
+  if (types.length === 3) return null // 全选返回null
+
+  if (types.length > 1) return `度:(${types.join('|')})`
+  return `度:${types[0]}`
+})
+// console.log('selectedRarity 的值:', rarityResult.value)
 // console.log('selectedRarity 的值:', selectedRarity.value) // 输出 selectedRarity 的值
+// 地图腐化状态部分
 const selectedCorrupted = ref<string | null>(null)
+const handleUpdateCorrupted = (value: string): void => {
+  selectedCorrupted.value = value
+}
+// 计算属性，生成腐化状态字符串
+const corruptedRegex = computed(() => {
+  const map = {
+    污染: '污染',
+    为污染: '为污染'
+  }
+  return selectedCorrupted.value ? map[selectedCorrupted.value] : null
+})
+// 未完待续
 const maptiger = ref(false)
 const mapLevelRange = ref<[number, number]>([1, 16])
 // --------topcard部分的定义结束
@@ -271,29 +331,13 @@ const toggleRightSelection = (index: number): void => {
   }
 }
 
-// 防抖函数
-const debounce = <T extends (...args: never[]) => unknown>(
-  fn: T,
-  delay: number
-): ((this: ThisParameterType<T>, ...args: Parameters<T>) => void) => {
-  let timer: ReturnType<typeof setTimeout> | null = null
-
-  return function (this: ThisParameterType<T>, ...args: Parameters<T>) {
-    if (timer) clearTimeout(timer)
-    timer = setTimeout(() => {
-      fn.apply(this, args)
-      timer = null
-    }, delay)
-  }
-}
-
 // 前缀搜索（带防抖）
-const prefixSearch = debounce(() => {
+const prefixSearch = useDebounceFn(() => {
   // 搜索逻辑在 computed 属性中已实现
 }, 300)
 
 // 后缀搜索（带防抖）
-const suffixSearch = debounce(() => {
+const suffixSearch = useDebounceFn(() => {
   // 搜索逻辑在 computed 属性中已实现
 }, 300)
 // --------listcard部分的定义结束
@@ -301,7 +345,8 @@ const suffixSearch = debounce(() => {
 const WaystoneResult = computed(() => {
   let leftResult = ''
   let rightResult = ''
-
+  let rarityResult = tigerRegex.value ? `"${tigerRegex.value}"` : ''
+  let corruptedResult = corruptedRegex.value
   if (selectedRule.value === 'rule-and') {
     // 当 selectedRule 为 'rule-and' 时，左侧每个值单独用 "" 包裹
     leftResult = leftSelectedRegex.value.map((item) => `"${item}"`).join(' ')
@@ -317,7 +362,7 @@ const WaystoneResult = computed(() => {
   }
 
   // 合并左右结果，中间用空格分隔
-  return [leftResult, rightResult].filter(Boolean).join(' ')
+  return [leftResult, rightResult, rarityResult, corruptedResult].filter(Boolean).join(' ')
 })
 </script>
 <style scoped>
