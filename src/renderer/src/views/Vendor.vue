@@ -80,26 +80,31 @@
             </n-gi>
             <n-gi>
               <n-form-item-gi :span="12" label="其他内容" label-placement="top">
-                <n-checkbox-group>
+                <n-flex align="center">
+                  <n-checkbox v-model:checked="dropchanceEnabled" value=": ">
+                    換界石掉落機率大于
+                  </n-checkbox>
+                  <n-input-number
+                    v-model:value="dropchanceValue"
+                    placeholder="100"
+                    :min="100"
+                    :max="700"
+                    :step="100"
+                    :disabled="!dropchanceEnabled"
+                    style="width: 110px"
+                  >
+                    <template #suffix> % </template>
+                  </n-input-number>
+                </n-flex>
+                <n-checkbox-group :value="selectedgoodMods" @update:value="handleUpdateGoodmods">
                   <n-flex vertical>
-                    <n-flex align="center">
-                      <n-checkbox value="dropchance">換界石掉落機率大于</n-checkbox>
-                      <n-input-number
-                        placeholder="100"
-                        :min="100"
-                        :max="700"
-                        :step="100"
-                        style="width: 110px"
-                      >
-                        <template #suffix> % </template>
-                      </n-input-number>
-                    </n-flex>
                     <n-checkbox value="瘋癲">此區域玩家 #% 瘋癲</n-checkbox>
-                    <n-checkbox value="有額外">區域含有額外 # 群怪物</n-checkbox>
-                    <n-checkbox value="數: 0">復活數: 0(字符串需要加""包裹)</n-checkbox>
+                    <n-checkbox value="額外">區域含有額外词缀的地图</n-checkbox>
+                    <!-- <n-checkbox value="數: 0">復活數: 0(字符串需要加""包裹)</n-checkbox> -->
                   </n-flex>
                 </n-checkbox-group>
               </n-form-item-gi>
+              <n-checkbox value='"數: 0"' label="復活數: 0"></n-checkbox>
             </n-gi>
           </n-grid>
         </n-form>
@@ -196,7 +201,7 @@ import {
 } from 'naive-ui'
 //listcard部分的导入
 import { NScrollbar, NList, NListItem, NInput } from 'naive-ui'
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 // 导入waystone词缀部分数据
 import { waystoneRegex, WaystoneRegex } from '@generated/Waystone'
 import { useDebounceFn } from '@vueuse/core' // 导入防抖函数
@@ -259,6 +264,44 @@ const corruptedRegex = computed(() => {
 // 未完待续
 const maptiger = ref(false)
 const mapLevelRange = ref<[number, number]>([1, 16])
+// 其他内容部分
+// --掉落几率部分
+const dropchanceEnabled = ref(false) // 默认禁用状态
+const dropchanceValue = ref(100) // 默认值
+const dropchanceRegex = computed(() => {
+  if (dropchanceEnabled.value) {
+    // 固定字符串，取数字输入框值的首位
+    const firstDigit = String(dropchanceValue.value)[0]
+    return dropchanceEnabled.value ? `: \\+[${firstDigit}-9]\\d\\d` : null
+  }
+  return ''
+})
+
+// 监听 combinedValue 的变化，将结果打印到控制台  这部分是临时增加的,用于调试,主要是还没想好
+// 感觉可能还需要重构,当前的整体逻辑不太对
+// 思考的思路是  应该有一个初始的状态管理,然后不同的操作会更改这些状态,最后再根据这些状态生成最终的结果
+watch(dropchanceRegex, (newValue) => {
+  console.log(newValue)
+})
+
+//-- goodmods部分
+const selectedgoodMods = ref<(string | number)[]>([])
+const handleUpdateGoodmods = (value: (string | number)[]): void => {
+  selectedgoodMods.value = value
+
+  // 生成动态字符串
+  // const result = value
+  //   .map((item) => {
+  //     // if (item === '"數: 0"') return item // 已经带引号的值保持不变
+  //     return `"${item}"` // 其他值添加引号
+  //   })
+  //   .join(' ')
+
+  // console.log('选中的其他内容:', selectedgoodMods.value)
+}
+
+// 计算属性，生成其他内容字符串部分合并到下面字符串计算里面
+
 // --------topcard部分的定义结束
 // --------listcard部分的定义开始
 // 封装过滤和转换数据的函数
@@ -347,15 +390,31 @@ const WaystoneResult = computed(() => {
   let rightResult = ''
   let rarityResult = tigerRegex.value ? `"${tigerRegex.value}"` : ''
   let corruptedResult = corruptedRegex.value
+  const goodModsResult = selectedgoodMods.value || []
+  const dropchanceResult = dropchanceRegex.value ? `"${dropchanceRegex.value}"` : ''
   if (selectedRule.value === 'rule-and') {
     // 当 selectedRule 为 'rule-and' 时，左侧每个值单独用 "" 包裹
-    leftResult = leftSelectedRegex.value.map((item) => `"${item}"`).join(' ')
+    leftResult = [
+      ...leftSelectedRegex.value.map((item) => `"${item}"`),
+      ...goodModsResult.map((item) => {
+        // if (item === '"數: 0"') return item // 已经带引号的值保持不变
+        return `"${item}"` // 其他值添加引号
+      }),
+      dropchanceResult
+    ].join(' ')
     // 右侧值用 | 连接后用 "" 包裹
     const rightRegexStr = rightSelectedRegex.value.join('|')
     rightResult = rightRegexStr ? `"${rightRegexStr}"` : ''
   } else {
     // 其他情况（rule-or），左右两侧值用 | 连接后用 "" 包裹
-    const leftRegexStr = leftSelectedRegex.value.join('|')
+    const leftRegexStr = [
+      ...leftSelectedRegex.value,
+      ...goodModsResult.map((item) => {
+        // if (item === '"數: 0"') return item.slice(1, -1) // 去掉已有的引号
+        return item
+      }),
+      dropchanceRegex.value
+    ].join('|')
     leftResult = leftRegexStr ? `"${leftRegexStr}"` : ''
     const rightRegexStr = rightSelectedRegex.value.join('|')
     rightResult = rightRegexStr ? `"${rightRegexStr}"` : ''
