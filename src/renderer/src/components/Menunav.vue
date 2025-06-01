@@ -56,6 +56,20 @@ const menuOptions: MenuOption[] = [
       ),
     key: 'favorite',
     icon: renderIcon(WorkIcon)
+  },
+  {
+    label: () =>
+      h(
+        RouterLink,
+        {
+          to: {
+            path: '/demo'
+          }
+        },
+        { default: () => '测试页面' }
+      ),
+    key: 'demo',
+    icon: renderIcon(WorkIcon)
   }
 ]
 </script>

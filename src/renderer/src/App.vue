@@ -21,7 +21,7 @@
         <RouterView />
       </n-layout-content>
 
-      <n-layout-footer bordered> 成府路 </n-layout-footer>
+      <n-layout-footer bordered> App里面的页脚部分 </n-layout-footer>
     </n-layout>
   </n-layout>
 </template>
