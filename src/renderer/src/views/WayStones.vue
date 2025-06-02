@@ -17,7 +17,9 @@
             >
               重置
             </n-button>
-            <n-button type="warning" style="flex: 1; height: 40px" @click="copyRegex"> 复制 </n-button>
+            <n-button type="warning" style="flex: 1; height: 40px" @click="copyRegex">
+              复制
+            </n-button>
           </n-flex>
         </n-flex>
         <n-card hoverable style="flex: 1; height: 120px" embedded> {{ waystoneRegex }} </n-card>
@@ -37,7 +39,22 @@
             </n-radio-group>
           </n-grid-item>
           <n-grid-item>
-            <div class="light-green">右1</div>
+            <n-flex align="center">
+              <n-checkbox v-model:checked="probability" value=": ">換界石掉落機率大于 </n-checkbox>
+              <n-input-number
+                v-model:value="probabilityValue"
+                clearable
+                placeholder="200"
+                :min="100"
+                :max="700"
+                :step="100"
+                :disabled="!probability"
+                style="width: 130px"
+                button-placement="both"
+              >
+                <template #suffix> % </template>
+              </n-input-number>
+            </n-flex>
           </n-grid-item>
           <n-grid-item>
             <n-flex align="center">
@@ -97,14 +114,14 @@ import { ref, computed } from 'vue'
 //result部分的导入
 import { NCard, NButton, NFlex } from 'naive-ui'
 //主要内容部分的导入
-import { NCheckbox, NCheckboxGroup, NRadioGroup, NRadio, NSlider } from 'naive-ui'
+import { NCheckbox, NCheckboxGroup, NRadioGroup, NRadio, NSlider, NInputNumber } from 'naive-ui'
 import { useClipboard } from '@vueuse/core'
 // 导入选项部分数据映射标
 import { rarityMap, selectedRule, corrType } from './waystone/setConfig'
 // 导入正则表达式生成函数
 import {
   generateRarityRegex,
-  generateTypeRegex,
+  generateTypeRegex, //稍后使用,暂时报错
   generateLevelRegex,
   generateCorruptedRegex
 } from './waystone/regexGenerator'
@@ -116,8 +133,11 @@ const defaultRuleKey =
 const selectedRe = ref(defaultRuleKey)
 const selectedCorr = ref<string | null>(null)
 
-const maptiger = ref(false)
-const defense = ref<[number, number]>([1, 16])
+const maptiger = ref(false) // 地图等级开关
+const defense = ref<[number, number]>([1, 16]) // 地图等级范围
+const probability = ref(false) // 換界石掉落機率开关
+const probabilityValue = ref<number>(200) // 默认換界石掉落機率值
+
 // 定义重置函数
 const resetState = (): void => {
   selectedRarities.value = []
@@ -125,6 +145,8 @@ const resetState = (): void => {
   selectedCorr.value = null
   maptiger.value = false
   defense.value = [1, 16]
+  probability.value = false
+  probabilityValue.value = 200
 }
 const { copy } = useClipboard()
 

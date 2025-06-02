@@ -37,15 +37,61 @@ export function generateLevelRegex(minLevel: number, maxLevel: number): string |
 }
 
 /**
- * 生成数值属性正则表达式
- * @param property - 属性名称
+ * 生成防御值正则表达式
+ * @param propertyName - 属性名，如 'def'
  * @param value - 属性值
+ * @param selectedQuality - 选中的品质值
  * @returns 生成的正则字符串
  */
 export function generateNumericPropertyRegex(
-  property: string,
-  value: number | null
+  propertyName: string,
+  value: number,
+  selectedQuality: string | null
+): string {
+  const baseRegex = `${propertyName}:${value}`
+  if (selectedQuality === 'Normal') {
+    return `normal:${baseRegex}`
+  } else if (selectedQuality === 'Superiour') {
+    return `q2:${baseRegex}`
+  }
+  return baseRegex
+}
+
+/**
+ * 生成组合列表项正则表达式
+ * @param selectedItemsPart1 - 第一部分选中的列表项值数组
+ * @param selectedItemsPart2 - 第二部分选中的列表项值数组
+ * @param selectedQuality - 选中的品质值
+ * @returns 生成的正则字符串，若两个数组都为空则返回 null
+ */
+export function generateCombinedListItemRegex(
+  selectedItemsPart1: string[],
+  selectedItemsPart2: string[],
+  selectedQuality: string | null
 ): string | null {
-  if (value === null || isNaN(value)) return null
-  return `"${property}: ${value}"`
+  let part1Regex = ''
+  if (selectedItemsPart1.length > 0) {
+    if (selectedQuality === 'Normal') {
+      part1Regex = `normal:(${selectedItemsPart1.join('|')})`
+    } else if (selectedQuality === 'Superiour') {
+      part1Regex = `q2:(${selectedItemsPart1.join('|')})`
+    } else {
+      // part1Regex = `(${selectedItemsPart1.join('|')})`
+      part1Regex = `(?:${selectedItemsPart1.map((item) => escapeRegExp(item)).join('|')})`
+    }
+  }
+
+  const part2Regex = selectedItemsPart2.length > 0 ? `(${selectedItemsPart2.join('|')})` : ''
+
+  const allRegexParts = [part1Regex, part2Regex].filter(Boolean)
+
+  return allRegexParts.length > 0 ? allRegexParts.join('|') : null
+}
+/**
+ * 转义正则表达式特殊字符
+ * @param str - 要转义的字符串
+ * @returns 转义后的字符串
+ */
+function escapeRegExp(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }

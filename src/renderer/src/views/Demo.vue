@@ -1,121 +1,93 @@
 <template>
-  <div class="max-w-4xl mx-auto p-4">
-    <n-card class="mb-6">
-      <h1 class="text-2xl font-bold mb-4">物品正则表达式生成器</h1>
-
-      <!-- 稀有度选择（多选） -->
-      <div class="mb-4">
-        <h3 class="text-lg font-medium mb-2">稀有度</h3>
-        <n-checkbox-group v-model:value="selectedRarities">
-          <n-checkbox v-for="(label, key) in rarityOptions" :key="key" :value="key">
-            {{ label }}
-          </n-checkbox>
-        </n-checkbox-group>
+  <n-card title="Vue Naive UI 案例">
+    <div class="list-container">
+      <div
+        v-for="(item, index) in list"
+        :key="index"
+        class="list-item"
+        :class="{ selected: item.selected }"
+        @click="handleTextClick(item)"
+      >
+        <span class="text-content">{{ item.text }}</span>
+        <n-input
+          v-if="item.text.includes('输入框')"
+          v-model:value="item.inputValue"
+          placeholder="请输入内容"
+          @update:value="handleInputChange(item)"
+          @click.stop
+        />
       </div>
-
-      <!-- 品质选择（单选） -->
-      <div class="mb-4">
-        <h3 class="text-lg font-medium mb-2">品质</h3>
-        <n-radio-group v-model:value="selectedQuality">
-          <n-radio v-for="(label, key) in qualityOptions" :key="key" :value="key">
-            {{ label }}
-          </n-radio>
-        </n-radio-group>
-      </div>
-
-      <!-- 等级范围（数字输入框） -->
-      <div class="mb-4">
-        <h3 class="text-lg font-medium mb-2">物品等级范围</h3>
-        <n-space>
-          <n-input-number
-            v-model:value="minLevel"
-            :min="1"
-            :max="100"
-            placeholder="最小等级"
-            style="width: 120px"
-          />
-          <span>至</span>
-          <n-input-number
-            v-model:value="maxLevel"
-            :min="1"
-            :max="100"
-            placeholder="最大等级"
-            style="width: 120px"
-          />
-        </n-space>
-      </div>
-
-      <!-- 防御值（滑块） -->
-      <div class="mb-4">
-        <h3 class="text-lg font-medium mb-2">防御值</h3>
-        <n-slider v-model:value="defense" :min="0" :max="1000" :step="10" show-input show-tooltip />
-        <div class="mt-2 text-sm text-gray-500">当前值: {{ defense }}</div>
-      </div>
-
-      <!-- 生成结果 -->
-      <div class="mt-6">
-        <h3 class="text-lg font-medium mb-2">生成的正则表达式</h3>
-        <n-input v-model:value="regexResult" type="textarea" readonly class="min-h-[100px]" />
-      </div>
-    </n-card>
-  </div>
+    </div>
+    <div class="result-container">
+      <n-input v-model:value="resultText" placeholder="结果展示区域" />
+    </div>
+  </n-card>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import {
-  NCard,
-  NCheckbox,
-  NCheckboxGroup,
-  NRadio,
-  NRadioGroup,
-  NInputNumber,
-  NSlider,
-  NInput,
-  NSpace
-} from 'naive-ui'
-import {
-  generateRarityRegex,
-  generateQualityRegex,
-  generateLevelRegex,
-  generateNumericPropertyRegex
-} from './demo/regexGenerator'
-import { rarityMap, qualityMap } from './demo/rarityMap'
+import { ref } from 'vue'
+import { NCard, NInput } from 'naive-ui'
+interface ListItem {
+  text: string
+  inputValue: string
+  selected: boolean
+  value: string
+}
 
-// 状态管理
-const selectedRarities = ref<string[]>([])
-const selectedQuality = ref<string | null>(null)
-const minLevel = ref(1)
-const maxLevel = ref(100)
-const defense = ref(500)
+const list = ref<ListItem[]>([
+  { text: '普通文本项', inputValue: '', selected: false, value: 'option1-1' },
+  { text: '带输入框的文本项', inputValue: '', selected: false, value: 'option1-2' },
+  { text: '另一个普通文本', inputValue: '', selected: false, value: 'option1-3' },
+  { text: '测试输入框显示条件', inputValue: '', selected: false, value: 'option1-4' }
+])
 
-// 生成选项列表
-const rarityOptions = Object.fromEntries(
-  // Object.entries(rarityMap).map(([key, value]) => [key, `${key} (${value})`])
-  Object.entries(rarityMap).map(([key]) => [key, `${key}`])
-)
+const resultText = ref('')
 
-const qualityOptions = Object.fromEntries(
-  // Object.entries(qualityMap).map(([key, value]) => [key, `${key} (${value})`])
-  Object.entries(qualityMap).map(([key]) => [key, `${key}`])
-)
+const handleTextClick = (item: ListItem): void => {
+  item.selected = !item.selected
+  updateResultText()
+}
 
-// 计算最终正则表达式
-const regexResult = computed(() => {
-  const conditions = [
-    generateRarityRegex(selectedRarities.value),
-    generateQualityRegex(selectedQuality.value),
-    generateLevelRegex(minLevel.value, maxLevel.value),
-    generateNumericPropertyRegex('def', defense.value)
-  ].filter(Boolean)
+const handleInputChange = (item: ListItem): void => {
+  item.inputValue = item.inputValue.trim() // 可选：添加一些处理逻辑 不加会提示报错, 但是不影响使用
+  updateResultText()
+}
 
-  return conditions.length > 0 ? conditions.join(' ') : null
-})
+const updateResultText = (): void => {
+  const selectedItems = list.value.filter((item) => item.selected)
+  resultText.value = selectedItems
+    .map((item) => {
+      // 如果有输入值，则拼接输入值和value；否则只显示value
+      return item.inputValue ? `${item.value}:${item.inputValue}` : item.value
+    })
+    .join(', ')
+}
 </script>
 
 <style scoped>
-.n-checkbox,
-.n-radio {
-  margin-bottom: 8px;
+.list-container {
+  margin-bottom: 20px;
+}
+
+.list-item {
+  padding: 12px;
+  margin: 8px 0;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.list-item.selected {
+  background-color: #e0f2fe;
+  border-color: #bae6fd;
+}
+
+.text-content {
+  margin-right: 16px;
+}
+
+.result-container {
+  margin-top: 20px;
 }
 </style>

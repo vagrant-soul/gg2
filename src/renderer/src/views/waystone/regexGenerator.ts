@@ -71,7 +71,7 @@ export function generateLevelRegex(minLevel: number, maxLevel: number): string |
 }
 
 /**
- * 生成数值属性正则表达式
+ * 临时代码,无用可删除部分
  * @param property - 属性名称
  * @param value - 属性值
  * @returns 生成的正则字符串
