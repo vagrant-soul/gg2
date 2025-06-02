@@ -202,8 +202,8 @@ import {
 //listcard部分的导入
 import { NScrollbar, NList, NListItem, NInput } from 'naive-ui'
 import { ref, computed, watch } from 'vue'
-// 导入waystone词缀部分数据
-import { waystoneRegex, WaystoneRegex } from '@generated/Waystone'
+// 导入waystone词缀部分数据 因为修改了路径,这里改成临时的路径
+import { waystoneRegex, WaystoneRegex } from './demo/Waystone'
 import { useDebounceFn } from '@vueuse/core' // 导入防抖函数
 // 导入单据配置文件
 // import { rarityConfig } from './waystone/waystoneConfig'

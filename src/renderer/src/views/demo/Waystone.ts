@@ -1,11 +1,11 @@
-export interface WaystoneRegexList {
+export interface WaystoneRegex {
   name: string
   regex: string
   values: number[]
   ranges: number[][]
   affix: string
 }
-export const waystoneRegexList: WaystoneRegexList[] = [
+export const waystoneRegex: WaystoneRegex[] = [
   {
     name: '##% 增加獲得的經驗',
     regex: '經驗',

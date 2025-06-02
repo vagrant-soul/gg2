@@ -104,17 +104,68 @@
       </n-card>
       <!-- 选项部分结束 -->
       <!-- 列表部分 -->
-      <n-card style="margin-top: 20px">列表区域,还没有添加内容</n-card>
+      <n-card title="Vue Naive UI 案例">
+        <n-grid :cols="2" :x-gap="20" style="height: 100%">
+          <!-- 前缀左侧部分 -->
+          <n-gi>
+            <n-scrollbar style="max-height: 400px">
+              <div class="list-container">
+                <div
+                  v-for="(item, index) in list"
+                  :key="index"
+                  class="list-item"
+                  :class="{ selected: item.selected }"
+                  @click="handleTextClick(item)"
+                >
+                  <n-flex align="center">
+                    <n-input
+                      v-if="
+                        item.name.startsWith('##%') &&
+                        item.ranges.length > 0 &&
+                        item.ranges[0][0] > 0
+                      "
+                      v-model:value="item.inputValue"
+                      clearable
+                      style="width: 90px; margin-right: 2px"
+                      :placeholder="`${item.ranges[0][0]}-${item.ranges[0][1]}`"
+                      @update:value="handleInputChange(item)"
+                      @click.stop
+                    />
+                    <span class="text-content">{{
+                      item.name.startsWith('##%') && item.ranges.length > 0 && item.ranges[0][0] > 0
+                        ? item.name.replace(/##/, '')
+                        : item.name.replace(/##/g, '#')
+                    }}</span>
+                  </n-flex>
+                </div>
+              </div>
+            </n-scrollbar>
+          </n-gi>
+          <!-- 后缀右侧部分 -->
+          <n-gi> 内容待添加 </n-gi>
+        </n-grid>
+        <div class="result-container">
+          <n-input v-model:value="resultText" placeholder="结果展示区域" />
+        </div>
+      </n-card>
     </n-layout-content>
   </n-layout>
 </template>
 <script setup lang="ts">
-import { NLayout, NLayoutHeader, NLayoutContent, NGrid, NGridItem } from 'naive-ui'
+import { NLayout, NLayoutHeader, NLayoutContent, NGrid, NGridItem, NScrollbar, NGi } from 'naive-ui'
 import { ref, computed } from 'vue'
 //result部分的导入
 import { NCard, NButton, NFlex } from 'naive-ui'
 //主要内容部分的导入
-import { NCheckbox, NCheckboxGroup, NRadioGroup, NRadio, NSlider, NInputNumber } from 'naive-ui'
+import {
+  NCheckbox,
+  NCheckboxGroup,
+  NRadioGroup,
+  NRadio,
+  NSlider,
+  NInputNumber,
+  NInput
+} from 'naive-ui'
 import { useClipboard } from '@vueuse/core'
 // 导入选项部分数据映射标
 import { rarityMap, selectedRule, corrType } from './waystone/setConfig'
@@ -125,6 +176,56 @@ import {
   generateLevelRegex,
   generateCorruptedRegex
 } from './waystone/regexGenerator'
+// 列表部分数据和逻辑开始
+import { waystoneRegexList, WaystoneRegexList } from '../generated/Waystone'
+import { generateNumberRegex } from '../lib/GenerateNumberRegex'
+interface ListItem extends WaystoneRegexList {
+  selected: boolean
+  inputValue: string
+}
+// 这部分是前缀部分,后面调试完毕后应该需要改名字
+const list = ref<ListItem[]>(
+  waystoneRegexList
+    .filter((item) => item.affix === 'PREFIX') // 只筛选PREFIX类型
+    .map((item) => ({
+      ...item,
+      selected: false,
+      inputValue: '',
+      text: item.name
+    }))
+)
+
+const resultText = ref('')
+
+// 修改 handleTextClick 方法
+const handleTextClick = (item: ListItem): void => {
+  item.selected = !item.selected
+  updateResultText()
+}
+
+// 修改 handleInputChange 方法
+const handleInputChange = (item: ListItem): void => {
+  item.inputValue = item.inputValue.trim()
+  if (item.inputValue) {
+    item.selected = true // 当有输入值时设为选中状态
+  }
+  updateResultText()
+}
+
+// 修改 updateResultText 方法
+const updateResultText = (): void => {
+  const selectedItems = list.value.filter((item) => item.selected)
+  resultText.value = selectedItems
+    .map((item) => {
+      if (item.inputValue) {
+        const regexStr = generateNumberRegex(item.inputValue, true, false)
+        return `${regexStr}.*${item.regex}`
+      }
+      return item.regex
+    })
+    .join(', ')
+}
+// 列表部分数据和逻辑结束
 // 状态管理
 const selectedRarities = ref<string[]>([])
 // 从 selectedRule 中获取 rule-or 对应的键作为默认值
@@ -197,5 +298,30 @@ const waystoneRegex = computed(() => {
 }
 .green {
   background-color: rgba(0, 128, 0, 0.24);
+}
+.list-container {
+  margin-bottom: 20px;
+}
+
+.list-item {
+  padding: 12px;
+  margin: 8px 0;
+  /* border: 1px solid #e5e7eb; */
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.list-item.selected {
+  background-color: #e0f2fe;
+  border-color: #bae6fd;
+}
+
+.text-content {
+  margin-right: 16px;
+}
+
+.result-container {
+  margin-top: 20px;
 }
 </style>
