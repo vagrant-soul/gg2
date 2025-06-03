@@ -67,7 +67,23 @@
             </n-flex>
           </n-grid-item>
           <n-grid-item>
-            <div class="light-green">右2</div>
+            <n-flex align="center">
+              <n-checkbox v-model:checked="isDelirious" value="瘋癲">此區域玩家 #% 瘋癲</n-checkbox>
+              <!-- 暂时不知道范围,先不做 -->
+              <!-- <n-input-number
+                v-model:value="probabilityValue"
+                clearable
+                placeholder="200"
+                :min="100"
+                :max="700"
+                :step="100"
+                :disabled="!probability"
+                style="width: 130px"
+                button-placement="both"
+              >
+                <template #suffix> % </template>
+              </n-input-number> -->
+            </n-flex>
           </n-grid-item>
           <n-grid-item>
             腐化状态:
@@ -78,7 +94,11 @@
             </n-radio-group>
           </n-grid-item>
           <n-grid-item>
-            <div class="light-green">右3</div>
+            <n-flex align="center">
+              <n-checkbox v-model:checked="isMonsterPacks" value="額外"
+                >區域含有 額外 词缀的地图</n-checkbox
+              >
+            </n-flex>
           </n-grid-item>
           <n-grid-item>
             <n-flex align="center">
@@ -95,29 +115,39 @@
                 style="flex: 1; min-width: 150px"
               />
             </n-flex>
-            <div class="mt-2 text-sm text-gray-500">当前值: {{ defense }}</div>
+            <!-- 下面是临时显示范围数据 -->
+            <!-- <div class="mt-2 text-sm text-gray-500">当前值: {{ defense }}</div> -->
           </n-grid-item>
           <n-grid-item>
-            <div class="light-green">右4</div>
+            <n-flex align="center">
+              <n-checkbox v-model:checked="zeroRome" value='"數: 0"'>復活數是0的地图</n-checkbox>
+            </n-flex>
           </n-grid-item>
         </n-grid>
       </n-card>
       <!-- 选项部分结束 -->
       <!-- 列表部分 -->
-      <n-card title="Vue Naive UI 案例">
+      <n-card>
         <n-grid :cols="2" :x-gap="20" style="height: 100%">
           <!-- 前缀左侧部分 -->
           <n-gi>
+            <n-input
+              v-model:value="prefixKeyword"
+              clearable
+              placeholder="输入前缀内容"
+              style="margin-bottom: 16px"
+              @input="prefixSearch"
+            />
             <n-scrollbar style="max-height: 400px">
               <div class="list-container">
                 <div
-                  v-for="(item, index) in list"
+                  v-for="(item, index) in prefixList"
                   :key="index"
                   class="list-item"
                   :class="{ selected: item.selected }"
-                  @click="handleTextClick(item)"
+                  @click="handleItemClick(item, 'PREFIX')"
                 >
-                  <n-flex align="center">
+                  <n-flex align="center" style="flex-wrap: nowrap; width: 100%">
                     <n-input
                       v-if="
                         item.name.startsWith('##%') &&
@@ -126,34 +156,73 @@
                       "
                       v-model:value="item.inputValue"
                       clearable
-                      style="width: 90px; margin-right: 2px"
+                      style="width: 95px; margin-right: 2px"
                       :placeholder="`${item.ranges[0][0]}-${item.ranges[0][1]}`"
-                      @update:value="handleInputChange(item)"
+                      @update:value="handleItemInputChange(item, 'PREFIX')"
                       @click.stop
                     />
-                    <span class="text-content">{{
-                      item.name.startsWith('##%') && item.ranges.length > 0 && item.ranges[0][0] > 0
-                        ? item.name.replace(/##/, '')
-                        : item.name.replace(/##/g, '#')
-                    }}</span>
+                    <n-ellipsis style="flex: 1; min-width: 0">
+                      <span class="text-content">{{ formatItemName(item) }}</span></n-ellipsis
+                    >
                   </n-flex>
                 </div>
               </div>
             </n-scrollbar>
           </n-gi>
           <!-- 后缀右侧部分 -->
-          <n-gi> 内容待添加 </n-gi>
+          <n-gi
+            ><n-input
+              v-model:value="suffixKeyword"
+              clearable
+              placeholder="输入后缀内容"
+              style="margin-bottom: 16px"
+              @input="suffixSearch"
+            />
+            <n-scrollbar style="max-height: 400px">
+              <div class="list-container">
+                <div
+                  v-for="(item, index) in suffixList"
+                  :key="index"
+                  class="list-item"
+                  :class="{ selected: item.selected }"
+                  @click="handleItemClick(item, 'SUFFIX')"
+                >
+                  <n-flex align="center" style="flex-wrap: nowrap; width: 100%">
+                    <n-input
+                      v-if="
+                        item.name.startsWith('##%') &&
+                        item.ranges.length > 0 &&
+                        item.ranges[0][0] > 0
+                      "
+                      v-model:value="item.inputValue"
+                      clearable
+                      style="width: 95px; margin-right: 2px"
+                      :placeholder="`${item.ranges[0][0]}-${item.ranges[0][1]}`"
+                      @update:value="handleItemInputChange(item, 'SUFFIX')"
+                      @click.stop
+                    />
+                    <n-ellipsis style="flex: 1; min-width: 0">
+                      <span class="text-content">
+                        {{ formatItemName(item) }}
+                      </span>
+                    </n-ellipsis>
+                  </n-flex>
+                </div>
+              </div>
+            </n-scrollbar></n-gi
+          >
         </n-grid>
-        <div class="result-container">
+        <!-- 下面这部分是用来临时展示结果的 -->
+        <!-- <div class="result-container">
           <n-input v-model:value="resultText" placeholder="结果展示区域" />
-        </div>
+        </div> -->
       </n-card>
     </n-layout-content>
   </n-layout>
 </template>
 <script setup lang="ts">
 import { NLayout, NLayoutHeader, NLayoutContent, NGrid, NGridItem, NScrollbar, NGi } from 'naive-ui'
-import { ref, computed } from 'vue'
+import { ref, computed, type Ref } from 'vue'
 //result部分的导入
 import { NCard, NButton, NFlex } from 'naive-ui'
 //主要内容部分的导入
@@ -164,7 +233,8 @@ import {
   NRadio,
   NSlider,
   NInputNumber,
-  NInput
+  NInput,
+  NEllipsis
 } from 'naive-ui'
 import { useClipboard } from '@vueuse/core'
 // 导入选项部分数据映射标
@@ -174,57 +244,143 @@ import {
   generateRarityRegex,
   generateTypeRegex, //稍后使用,暂时报错
   generateLevelRegex,
-  generateCorruptedRegex
+  generateCorruptedRegex,
+  generateProbabilityRegex
 } from './waystone/regexGenerator'
+import { useDebounceFn } from '@vueuse/core'
+
+// todo: 目前正则的any和or的合并还没做
+// todo: 表单部分还没有完成,需要完后与整体的and和or进行合并
+
 // 列表部分数据和逻辑开始
 import { waystoneRegexList, WaystoneRegexList } from '../generated/Waystone'
 import { generateNumberRegex } from '../lib/GenerateNumberRegex'
+// 定义通用列表项接口
 interface ListItem extends WaystoneRegexList {
   selected: boolean
   inputValue: string
 }
-// 这部分是前缀部分,后面调试完毕后应该需要改名字
-const list = ref<ListItem[]>(
-  waystoneRegexList
-    .filter((item) => item.affix === 'PREFIX') // 只筛选PREFIX类型
+// 定义通用列表数据获取函数
+const getAffixList = (affixType: string): ListItem[] => {
+  return waystoneRegexList
+    .filter((item) => item.affix === affixType)
     .map((item) => ({
       ...item,
       selected: false,
       inputValue: '',
       text: item.name
     }))
-)
+}
+// 添加格式化名称的函数
+const formatItemName = (item: ListItem): string => {
+  if (item.name.startsWith('##%') && item.ranges.length > 0 && item.ranges[0][0] > 0) {
+    return item.name.replace(/##/, '')
+  }
+  return item.name.replace(/##/g, '#')
+}
+// 前缀部分
+const prefixKeyword = ref('')
+const prefixList = ref<ListItem[]>(getAffixList('PREFIX'))
 
-const resultText = ref('')
+// 后缀部分
+const suffixKeyword = ref('')
+const suffixList = ref<ListItem[]>(getAffixList('SUFFIX'))
 
-// 修改 handleTextClick 方法
-const handleTextClick = (item: ListItem): void => {
-  item.selected = !item.selected
-  updateResultText()
+// 在组件顶部添加一个全局变量来存储所有选中项
+const globalSelectedItems = ref<Record<string, ListItem>>({})
+// 通用搜索函数
+const createSearchHandler = (
+  listRef: Ref<ListItem[]>,
+  affixType: string
+): ((value: string) => void) => {
+  return useDebounceFn((value: string) => {
+    // 更新全局选中状态
+    listRef.value.forEach((item) => {
+      if (item.selected) {
+        globalSelectedItems.value[`${affixType}-${item.name}`] = { ...item }
+      }
+    })
+
+    if (!value.trim()) {
+      // 清空搜索时，恢复完整列表但保留选中状态
+      const newList = getAffixList(affixType)
+      newList.forEach((item) => {
+        const key = `${affixType}-${item.name}`
+        if (globalSelectedItems.value[key]) {
+          item.selected = globalSelectedItems.value[key].selected
+          item.inputValue = globalSelectedItems.value[key].inputValue
+        }
+      })
+      listRef.value = newList
+    } else {
+      // 有搜索词时，过滤列表
+      const keyword = value.toLowerCase()
+      listRef.value = waystoneRegexList
+        .filter((item) => item.affix === affixType && item.name.toLowerCase().includes(keyword))
+        .map((item) => ({
+          ...item,
+          selected: false,
+          inputValue: '',
+          text: item.name
+        }))
+    }
+
+    // 恢复选中状态（无论是否清空搜索）
+    listRef.value.forEach((item) => {
+      const key = `${affixType}-${item.name}`
+      if (globalSelectedItems.value[key]) {
+        item.selected = globalSelectedItems.value[key].selected
+        item.inputValue = globalSelectedItems.value[key].inputValue
+      }
+    })
+  }, 300)
 }
 
-// 修改 handleInputChange 方法
-const handleInputChange = (item: ListItem): void => {
+// 绑定搜索函数
+const prefixSearch = createSearchHandler(prefixList, 'PREFIX')
+const suffixSearch = createSearchHandler(suffixList, 'SUFFIX')
+// const resultText = ref('') // 用于显示结果的文本,后面要删除
+
+// 通用点击处理
+const handleItemClick = (item: ListItem, affixType: string): void => {
+  item.selected = !item.selected
+  const key = `${affixType}-${item.name}`
+  if (item.selected) {
+    globalSelectedItems.value[key] = { ...item }
+  } else {
+    delete globalSelectedItems.value[key]
+  }
+}
+
+// 通用输入处理
+const handleItemInputChange = (item: ListItem, affixType: string): void => {
   item.inputValue = item.inputValue.trim()
   if (item.inputValue) {
-    item.selected = true // 当有输入值时设为选中状态
+    item.selected = true
+    const key = `${affixType}-${item.name}`
+    globalSelectedItems.value[key] = { ...item }
+  } else {
+    item.selected = false
+    const key = `${affixType}-${item.name}`
+    delete globalSelectedItems.value[key]
   }
-  updateResultText()
 }
 
-// 修改 updateResultText 方法
-const updateResultText = (): void => {
-  const selectedItems = list.value.filter((item) => item.selected)
-  resultText.value = selectedItems
-    .map((item) => {
-      if (item.inputValue) {
-        const regexStr = generateNumberRegex(item.inputValue, true, false)
-        return `${regexStr}.*${item.regex}`
-      }
-      return item.regex
-    })
-    .join(', ')
-}
+// 结果文本更新
+// const updateResultText = (): void => {
+//   const allSelectedItems = [...prefixList.value, ...suffixList.value].filter(
+//     (item) => item.selected
+//   )
+//   resultText.value = allSelectedItems
+//     .map((item) => {
+//       if (item.inputValue) {
+//         const regexStr = generateNumberRegex(item.inputValue, true, false)
+//         return `${regexStr}.*${item.regex}`
+//       }
+//       return item.regex
+//     })
+//     .join(', ')
+// }
 // 列表部分数据和逻辑结束
 // 状态管理
 const selectedRarities = ref<string[]>([])
@@ -238,7 +394,9 @@ const maptiger = ref(false) // 地图等级开关
 const defense = ref<[number, number]>([1, 16]) // 地图等级范围
 const probability = ref(false) // 換界石掉落機率开关
 const probabilityValue = ref<number>(200) // 默认換界石掉落機率值
-
+const isDelirious = ref(false) // 瘋癲开关
+const isMonsterPacks = ref(false) // 額外怪物开关
+const zeroRome = ref(false) // 復活數是0的地图开关
 // 定义重置函数
 const resetState = (): void => {
   selectedRarities.value = []
@@ -247,7 +405,14 @@ const resetState = (): void => {
   maptiger.value = false
   defense.value = [1, 16]
   probability.value = false
+  isDelirious.value = false
+  isMonsterPacks.value = false
+  zeroRome.value = false
   probabilityValue.value = 200
+  globalSelectedItems.value = {}
+  prefixList.value = getAffixList('PREFIX')
+  suffixList.value = getAffixList('SUFFIX')
+  // resultText.value = '' // 清空结果文本  最后可删除
 }
 const { copy } = useClipboard()
 
@@ -281,14 +446,67 @@ const selectedCorrOptions = Object.fromEntries(
 )
 // 计算最终正则表达式
 const waystoneRegex = computed(() => {
-  const conditions = [
-    generateRarityRegex(selectedRarities.value),
-    // generateTypeRegex(selectedRe.value), //调试的时候可以打开 显示选择的规则
-    generateLevelRegex(defense.value[0], defense.value[1]),
-    generateCorruptedRegex(selectedCorr.value)
+  // 获取规则类型
+  const ruleType = generateTypeRegex(selectedRe.value)
+
+  // 从全局选中状态获取所有选中项，而不是从当前显示的列表中获取
+  const selectedPrefixes = Object.entries(globalSelectedItems.value)
+    .filter(([key]) => key.startsWith('PREFIX-'))
+    .map(([, item]) =>
+      item.inputValue
+        ? `${generateNumberRegex(item.inputValue, true, false)}.*${item.regex}`
+        : item.regex
+    )
+
+  const selectedSuffixes = Object.entries(globalSelectedItems.value)
+    .filter(([key]) => key.startsWith('SUFFIX-'))
+    .map(([, item]) =>
+      item.inputValue
+        ? `${generateNumberRegex(item.inputValue, true, false)}.*${item.regex}`
+        : item.regex
+    )
+
+  // 获取概率、疯癫和额外怪物条件
+  const probabilityRegex = generateProbabilityRegex(probability.value, probabilityValue.value)
+  const specialConditions = [
+    probabilityRegex,
+    isDelirious.value ? '瘋癲' : null,
+    isMonsterPacks.value ? '額外' : null
   ].filter(Boolean)
 
-  return conditions.length > 0 ? conditions.join(' ') : null
+  // 处理后缀部分 - 始终用 | 连接并用引号包裹
+  const suffixPart = selectedSuffixes.length > 0 ? `"${selectedSuffixes.join('|')}"` : null
+
+  // 根据规则类型处理前缀部分
+  if (ruleType === 'rule-or') {
+    // OR规则：特殊条件和选中前缀用|连接，并用引号包裹
+    const orConditions = [...specialConditions, ...selectedPrefixes].filter(Boolean)
+    const orPart = orConditions.length > 0 ? `"${orConditions.join('|')}"` : null
+
+    const andConditions = [
+      generateRarityRegex(selectedRarities.value),
+      generateLevelRegex(defense.value[0], defense.value[1]),
+      generateCorruptedRegex(selectedCorr.value),
+      zeroRome.value ? '"數: 0"' : null,
+      orPart,
+      suffixPart
+    ].filter(Boolean)
+
+    return andConditions.join(' ')
+  } else {
+    // AND规则：每个条件单独用引号包裹，用空格连接
+    const andConditions = [
+      generateRarityRegex(selectedRarities.value),
+      generateLevelRegex(defense.value[0], defense.value[1]),
+      generateCorruptedRegex(selectedCorr.value),
+      zeroRome.value ? '"數: 0"' : null,
+      ...specialConditions.map((c) => `"${c}"`),
+      ...selectedPrefixes.map((a) => `"${a}"`),
+      suffixPart
+    ].filter(Boolean)
+
+    return andConditions.join(' ')
+  }
 })
 </script>
 

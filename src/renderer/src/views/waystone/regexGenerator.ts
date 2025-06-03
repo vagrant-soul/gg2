@@ -9,7 +9,7 @@ import { rarityMap, selectedRule, corrType } from './setConfig'
  */
 export function generateTypeRegex(selectedRe: string | null): string | null {
   if (!selectedRe) return null
-  return `"规则: ${selectedRule[selectedRe]}"`
+  return selectedRule[selectedRe]
 }
 /**
  * 生成稀有度
@@ -70,6 +70,16 @@ export function generateLevelRegex(minLevel: number, maxLevel: number): string |
   return `"級: (?:${regexParts.join('|')})"`
 }
 
+/**
+ * 生成掉落概率正则表达式
+ * @param enabled - 是否启用概率过滤
+ * @param value - 概率值
+ * @returns 生成的正则字符串，若未启用则返回null
+ */
+export function generateProbabilityRegex(enabled: boolean, value: number): string | null {
+  if (!enabled) return null
+  return `: \\+[${value.toString()[0]}-9]\\d\\d`
+}
 /**
  * 临时代码,无用可删除部分
  * @param property - 属性名称
