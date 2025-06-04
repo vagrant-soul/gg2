@@ -5,7 +5,13 @@
       <n-flex align="start" justify="space-between" style="width: 100%">
         <n-flex vertical size="medium" style="width: 240px">
           <!-- 查询按钮 - 上方单独一行 -->
-          <n-button type="primary" block size="large" style="height: 64px; margin-bottom: 8px">
+          <n-button
+            type="primary"
+            block
+            size="large"
+            style="height: 64px; margin-bottom: 8px"
+            @click="ipcHandle"
+          >
             查询
           </n-button>
           <!-- 重置和收藏按钮 - 下方并列一行 -->
@@ -69,7 +75,7 @@
           <n-grid-item>
             <n-flex align="center">
               <n-checkbox v-model:checked="isDelirious" value="瘋癲">此區域玩家 #% 瘋癲</n-checkbox>
-              <!-- 暂时不知道范围,先不做 -->
+              <!-- 暂时无法确定范围,先不做 -->
               <!-- <n-input-number
                 v-model:value="probabilityValue"
                 clearable
@@ -249,9 +255,14 @@ import {
 } from './waystone/regexGenerator'
 import { useDebounceFn } from '@vueuse/core'
 
-// todo: 目前正则的any和or的合并还没做
-// todo: 表单部分还没有完成,需要完后与整体的and和or进行合并
-
+// todo: 地图页面调试基本完毕
+// todo: 需要调试查询按钮和electron的交互通信
+// todo: 如果能测试成功,优先完成左侧查询按钮的交互通信
+// todo: 完善左侧按钮对右侧部分的动态隐藏和显示
+// todo: 完善页脚部分,考虑是否要删除
+// todo: 整体页面的css优化和electron窗口大小的设置
+// todo: 当前页面的相关函数统一封装到一个文件中
+// todo: js部分的注释需要完善以及整体的结构逻辑要在整理清晰一下,完善备注,方便后续修改
 // 列表部分数据和逻辑开始
 import { waystoneRegexList, WaystoneRegexList } from '../generated/Waystone'
 import { generateNumberRegex } from '../lib/GenerateNumberRegex'
@@ -260,6 +271,8 @@ interface ListItem extends WaystoneRegexList {
   selected: boolean
   inputValue: string
 }
+// 测试与主窗口的通信
+const ipcHandle = (): void => window.electron.ipcRenderer.send('ping')
 // 定义通用列表数据获取函数
 const getAffixList = (affixType: string): ListItem[] => {
   return waystoneRegexList

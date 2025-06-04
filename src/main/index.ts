@@ -1,11 +1,56 @@
-import { app, shell, BrowserWindow, ipcMain } from 'electron'
+import { app, shell, BrowserWindow, ipcMain, Tray, Menu, globalShortcut } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
-import icon from '../../resources/icon.png?asset'
+// import icon from '../../resources/icon.png?asset'
 // 新增部分
 import fs from 'fs'
 import path from 'path'
 import { buttonContents } from './config/ButtonContentProvider'
+// 引入需要的组件
+import { OverlayController, OVERLAY_WINDOW_OPTS } from 'electron-overlay-window'
+import { uIOhook, UiohookKey as Key } from 'uiohook-napi'
+//
+app.disableHardwareAcceleration()
+// 启动 uIOhook 监听
+uIOhook.start()
+const toggleMouseKey = 'CmdOrCtrl + J'
+// const toggleShowKey = 'CmdOrCtrl + K'
+let mainWindow: BrowserWindow
+let tray: Tray | null = null
+
+// 创建托盘
+function createTray(window: BrowserWindow): void {
+  // 替换为你的托盘图标路径，确保图标存在
+  const trayIconPath = join(__dirname, '../../resources/icon.png')
+  tray = new Tray(trayIconPath)
+
+  const contextMenu = Menu.buildFromTemplate([
+    {
+      label: '显示窗口',
+      click: () => {
+        window.show()
+      }
+    },
+    {
+      label: '退出',
+      click: () => {
+        app.quit()
+      }
+    }
+  ])
+
+  tray.setToolTip('应用名称')
+  tray.setContextMenu(contextMenu)
+
+  // 点击托盘图标显示/隐藏窗口
+  tray.on('click', () => {
+    if (window.isVisible()) {
+      window.hide()
+    } else {
+      window.show()
+    }
+  })
+}
 ipcMain.handle('get-button-contents', async () => {
   const jsonPath = path.join(app.getPath('userData'), 'buttonContents.json')
   const data = fs.readFileSync(jsonPath, 'utf-8')
@@ -13,19 +58,19 @@ ipcMain.handle('get-button-contents', async () => {
 })
 function createWindow(): void {
   // Create the browser window.
-  const mainWindow = new BrowserWindow({
+  mainWindow = new BrowserWindow({
     width: 1027,
     height: 1000,
-    show: false,
+
     autoHideMenuBar: true,
-    ...(process.platform === 'linux' ? { icon } : {}),
+    ...OVERLAY_WINDOW_OPTS,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false
     }
   })
-  // 打开开发者工具
-  mainWindow.webContents.openDevTools()
+  // 打开开发者工具 会强制显示窗口
+  // mainWindow.webContents.openDevTools()
   // 在 createWindow 函数中添加文件检查逻辑
   const jsonPath = path.join(app.getPath('userData'), 'buttonContents.json')
 
@@ -33,9 +78,9 @@ function createWindow(): void {
   if (!fs.existsSync(jsonPath)) {
     fs.writeFileSync(jsonPath, JSON.stringify(buttonContents, null, 2))
   }
-  mainWindow.on('ready-to-show', () => {
-    mainWindow.show()
-  })
+  // mainWindow.on('ready-to-show', () => {
+  //   mainWindow.show()
+  // })
 
   mainWindow.webContents.setWindowOpenHandler((details) => {
     shell.openExternal(details.url)
@@ -49,6 +94,25 @@ function createWindow(): void {
   } else {
     mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
   }
+
+  // 附着窗口
+  OverlayController.attachByTitle(mainWindow, 'demo.txt - Notepad')
+
+  OverlayController.events.on('attach', () => {
+    setTimeout(() => {
+      if (!mainWindow.isDestroyed()) {
+        mainWindow.hide()
+        // mainWindow.setSkipTaskbar(true)
+      }
+    }, 100) // 100ms 延迟确保覆盖窗口完成初始化,这里不加延时,整个窗口就会一直显示
+  })
+  // todo  虽然整个逻辑好像没问题,但是总感觉哪里不对,需要在重新梳理一遍
+  // todo 明天还需要详细完善一下并理解整个代码的运行逻辑
+  // 按照ai推荐,有一些监听需要在推出时候处理,暂时还没弄好,先这样吧
+  makeDemoInteractive()
+  LogOverlayEventCalls()
+  // 创建托盘
+  createTray(mainWindow)
 }
 // 添加保存处理程序
 ipcMain.handle('save-button-content', async (_, { type, data }) => {
@@ -71,6 +135,82 @@ ipcMain.handle('save-button-content', async (_, { type, data }) => {
 
   return existingData
 })
+//-----------------------testing
+function LogOverlayEventCalls(): void {
+  // Still getting used to the events so uhhhhh just log when all of them are used.
+  OverlayController.events.addListener('attach', () => {
+    console.log('attach event emitted ')
+  })
+
+  OverlayController.events.addListener('fullscreen', () => {
+    console.log('fullscreen event emitted ')
+  })
+
+  OverlayController.events.addListener('detach', () => {
+    console.log('detach event emitted ')
+  })
+
+  OverlayController.events.addListener('moveresize', () => {
+    // console.log('moveresize event emitted ')
+  })
+
+  OverlayController.events.addListener('blur', () => {
+    console.log('blur event emitted ')
+  })
+
+  OverlayController.events.addListener('focus', () => {
+    console.log('focus event emitted ')
+  })
+}
+//-----------------------------
+function makeDemoInteractive(): void {
+  let isInteractable = false
+
+  function toggleOverlayState(): void {
+    if (isInteractable) {
+      mainWindow.show()
+      isInteractable = false
+      OverlayController.focusTarget()
+      // mainWindow.webContents.send('focus-change', false)
+      console.log('the first state')
+      console.log(isInteractable)
+      // isInteractable = false
+    } else {
+      // isInteractable = true
+      mainWindow.show()
+      // mainWindow.webContents.send('focus-change', true)
+      isInteractable = true
+      OverlayController.activateOverlay()
+      // OverlayController.focusTarget()
+      console.log('the second state ')
+      console.log(isInteractable)
+    }
+  }
+
+  mainWindow.on('blur', () => {
+    isInteractable = false
+    // mainWindow.webContents.send('focus-change', false)
+    mainWindow.hide()
+    console.log('the three state ')
+  })
+
+  globalShortcut.register(toggleMouseKey, toggleOverlayState)
+
+  // 新增监听
+  ipcMain.on('ping', () => {
+    isInteractable = true
+    OverlayController.focusTarget()
+    setTimeout(() => {
+      if (!mainWindow.isDestroyed()) {
+        mainWindow.hide()
+      }
+    }, 200) // 300ms 延时
+    // mainWindow.webContents.send('focus-change', false)
+    uIOhook.keyTap(Key.F, [Key.Ctrl])
+    console.log('the hotkey is pressed ')
+  })
+}
+
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
@@ -86,7 +226,7 @@ app.whenReady().then(() => {
   })
 
   // IPC test
-  ipcMain.on('ping', () => console.log('pong'))
+  // ipcMain.on('ping', () => console.log('pong'))
 
   createWindow()
 

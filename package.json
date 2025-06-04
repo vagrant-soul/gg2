@@ -24,7 +24,9 @@
     "@electron-toolkit/preload": "^3.0.1",
     "@electron-toolkit/utils": "^4.0.0",
     "@vueuse/core": "^13.3.0",
+    "electron-overlay-window": "^3.3.0",
     "pinia": "^3.0.2",
+    "uiohook-napi": "^1.5.4",
     "vue-router": "^4.5.1"
   },
   "devDependencies": {
