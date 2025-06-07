@@ -23,17 +23,21 @@
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.1",
     "@electron-toolkit/utils": "^4.0.0",
+    "@vicons/tabler": "^0.13.0",
     "@vueuse/core": "^13.3.0",
     "electron-overlay-window": "^3.3.0",
+    "opencc-js": "^1.0.5",
     "pinia": "^3.0.2",
     "uiohook-napi": "^1.5.4",
-    "vue-router": "^4.5.1"
+    "vue-router": "^4.5.1",
+    "vuedraggable": "^4.1.0"
   },
   "devDependencies": {
     "@electron-toolkit/eslint-config-prettier": "3.0.0",
     "@electron-toolkit/eslint-config-ts": "^3.0.0",
     "@electron-toolkit/tsconfig": "^1.0.1",
     "@types/node": "^22.14.1",
+    "@types/opencc-js": "^1.0.3",
     "@v2icons/ionicons5": "^0.13.0",
     "@vicons/ionicons5": "^0.13.0",
     "@vitejs/plugin-vue": "^5.2.3",

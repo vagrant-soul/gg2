@@ -21,12 +21,15 @@
     <div class="result-container">
       <n-input v-model:value="resultText" placeholder="结果展示区域" />
     </div>
+    <!-- 显示从第三方获取的版本信息 -->
+    <div v-if="versionInfo">版本信息: {{ versionInfo }}</div>
   </n-card>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { NCard, NInput } from 'naive-ui'
+
 interface ListItem {
   text: string
   inputValue: string
@@ -42,7 +45,7 @@ const list = ref<ListItem[]>([
 ])
 
 const resultText = ref('')
-
+const versionInfo = ref<string | null>(null)
 const handleTextClick = (item: ListItem): void => {
   item.selected = !item.selected
   updateResultText()
@@ -62,6 +65,15 @@ const updateResultText = (): void => {
     })
     .join(', ')
 }
+// 在组件挂载时发起请求
+onMounted(async () => {
+  try {
+    const text = await window.electron.ipcRenderer.invoke('get-version-info')
+    versionInfo.value = text as string
+  } catch (error) {
+    console.error('获取版本信息失败:', error)
+  }
+})
 </script>
 
 <style scoped>

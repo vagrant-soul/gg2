@@ -9,30 +9,50 @@
             type="primary"
             block
             size="large"
-            style="height: 64px; margin-bottom: 8px"
+            strong
+            style="height: 45px; margin-bottom: 8px"
             @click="ipcHandle"
           >
-            查询
+            <template #icon>
+              <n-icon>
+                <Search />
+              </n-icon>
+            </template>
+            搜索
           </n-button>
           <!-- 重置和收藏按钮 - 下方并列一行 -->
           <n-flex justify="space-between" align="center">
             <n-button
               type="error"
-              style="flex: 1; margin-right: 8px; height: 40px"
+              style="flex: 1; margin-right: 8px; height: 30px"
               @click="resetState"
             >
               重置
             </n-button>
-            <n-button type="warning" style="flex: 1; height: 40px" @click="copyRegex">
+            <n-button type="warning" style="flex: 1; height: 30px" @click="copyRegex">
               复制
             </n-button>
           </n-flex>
         </n-flex>
-        <n-card hoverable style="flex: 1; height: 120px" embedded> {{ waystoneRegex }} </n-card>
+
+        <n-card hoverable style="flex: 1; height: 90px" embedded>
+          {{ waystoneRegex }}
+          <!-- 显示字符数区域 -->
+          <div
+            :style="{
+              color: waystoneRegex.length > 50 ? 'red' : 'inherit',
+              position: 'absolute',
+              right: '10px',
+              bottom: '10px'
+            }"
+          >
+            当前字符数: {{ waystoneRegex.length }}/50
+          </div>
+        </n-card>
       </n-flex>
       <!-- Result结束部分 -->
     </n-layout-header>
-    <n-layout-content style="margin-top: 20px">
+    <n-layout-content style="margin-top: 20px" :native-scrollbar="false">
       <!-- 选项部分 -->
       <n-card>
         <n-grid :x-gap="12" :y-gap="8" :cols="2">
@@ -162,7 +182,7 @@
                       "
                       v-model:value="item.inputValue"
                       clearable
-                      style="width: 95px; margin-right: 2px"
+                      style="width: 90px; margin-right: 2px"
                       :placeholder="`${item.ranges[0][0]}-${item.ranges[0][1]}`"
                       @update:value="handleItemInputChange(item, 'PREFIX')"
                       @click.stop
@@ -227,7 +247,17 @@
   </n-layout>
 </template>
 <script setup lang="ts">
-import { NLayout, NLayoutHeader, NLayoutContent, NGrid, NGridItem, NScrollbar, NGi } from 'naive-ui'
+import {
+  NLayout,
+  NLayoutHeader,
+  NLayoutContent,
+  NGrid,
+  NGridItem,
+  NScrollbar,
+  NGi,
+  NIcon
+} from 'naive-ui'
+import { Search } from '@vicons/ionicons5'
 import { ref, computed, type Ref } from 'vue'
 //result部分的导入
 import { NCard, NButton, NFlex } from 'naive-ui'
@@ -248,21 +278,29 @@ import { rarityMap, selectedRule, corrType } from './waystone/setConfig'
 // 导入正则表达式生成函数
 import {
   generateRarityRegex,
-  generateTypeRegex, //稍后使用,暂时报错
+  generateTypeRegex,
   generateLevelRegex,
   generateCorruptedRegex,
   generateProbabilityRegex
 } from './waystone/regexGenerator'
 import { useDebounceFn } from '@vueuse/core'
+import * as OpenCC from 'opencc-js'
+// 初始化 OpenCC 实例，设置从简体转换为台湾繁体
+const converter = OpenCC.Converter({ from: 'cn', to: 'tw' })
 
-// todo: 地图页面调试基本完毕
-// todo: 需要调试查询按钮和electron的交互通信
-// todo: 如果能测试成功,优先完成左侧查询按钮的交互通信
-// todo: 完善左侧按钮对右侧部分的动态隐藏和显示
-// todo: 完善页脚部分,考虑是否要删除
-// todo: 整体页面的css优化和electron窗口大小的设置
-// todo: 当前页面的相关函数统一封装到一个文件中
-// todo: js部分的注释需要完善以及整体的结构逻辑要在整理清晰一下,完善备注,方便后续修改
+// 与主窗口通信  查询按钮的相关操作
+const ipcHandle = async (): Promise<void> => {
+  try {
+    // 先执行 copyRegex 函数
+    await copyRegex()
+    // 发送 ping 消息
+    window.electron.ipcRenderer.send('ping')
+    console.log('ping 消息已发送')
+  } catch (error) {
+    console.error('执行 ipcHandle 出错:', error)
+  }
+}
+
 // 列表部分数据和逻辑开始
 import { waystoneRegexList, WaystoneRegexList } from '../generated/Waystone'
 import { generateNumberRegex } from '../lib/GenerateNumberRegex'
@@ -271,8 +309,7 @@ interface ListItem extends WaystoneRegexList {
   selected: boolean
   inputValue: string
 }
-// 测试与主窗口的通信
-const ipcHandle = (): void => window.electron.ipcRenderer.send('ping')
+
 // 定义通用列表数据获取函数
 const getAffixList = (affixType: string): ListItem[] => {
   return waystoneRegexList
@@ -350,9 +387,16 @@ const createSearchHandler = (
 }
 
 // 绑定搜索函数
-const prefixSearch = createSearchHandler(prefixList, 'PREFIX')
-const suffixSearch = createSearchHandler(suffixList, 'SUFFIX')
-// const resultText = ref('') // 用于显示结果的文本,后面要删除
+const prefixSearch = async (value: string): Promise<void> => {
+  const convertedValue = await converter(value) // 转换为繁体
+  createSearchHandler(prefixList, 'PREFIX')(convertedValue)
+}
+const suffixSearch = async (value: string): Promise<void> => {
+  const convertedValue = await converter(value) // 转换为繁体
+  createSearchHandler(suffixList, 'SUFFIX')(convertedValue)
+}
+
+// const resultText = ref('') // 用于显示结果的文本,测试代码
 
 // 通用点击处理
 const handleItemClick = (item: ListItem, affixType: string): void => {
@@ -379,7 +423,7 @@ const handleItemInputChange = (item: ListItem, affixType: string): void => {
   }
 }
 
-// 结果文本更新
+// 结果文本更新 测试代码
 // const updateResultText = (): void => {
 //   const allSelectedItems = [...prefixList.value, ...suffixList.value].filter(
 //     (item) => item.selected
@@ -400,9 +444,8 @@ const selectedRarities = ref<string[]>([])
 // 从 selectedRule 中获取 rule-or 对应的键作为默认值
 const defaultRuleKey =
   Object.keys(selectedRule).find((key) => selectedRule[key] === 'rule-or') || '任一匹配'
-const selectedRe = ref(defaultRuleKey)
-const selectedCorr = ref<string | null>(null)
-
+const selectedRe = ref(defaultRuleKey) // 正则类型开关
+const selectedCorr = ref<string | null>(null) //腐化地图开关
 const maptiger = ref(false) // 地图等级开关
 const defense = ref<[number, number]>([1, 16]) // 地图等级范围
 const probability = ref(false) // 換界石掉落機率开关
@@ -410,6 +453,7 @@ const probabilityValue = ref<number>(200) // 默认換界石掉落機率值
 const isDelirious = ref(false) // 瘋癲开关
 const isMonsterPacks = ref(false) // 額外怪物开关
 const zeroRome = ref(false) // 復活數是0的地图开关
+
 // 定义重置函数
 const resetState = (): void => {
   selectedRarities.value = []
@@ -425,7 +469,7 @@ const resetState = (): void => {
   globalSelectedItems.value = {}
   prefixList.value = getAffixList('PREFIX')
   suffixList.value = getAffixList('SUFFIX')
-  // resultText.value = '' // 清空结果文本  最后可删除
+  // resultText.value = '' // 清空结果文本  测试代码
 }
 const { copy } = useClipboard()
 
@@ -449,12 +493,10 @@ const rarityOptions = Object.fromEntries(
 )
 
 const selectedRuleOptions = Object.fromEntries(
-  // Object.entries(qualityMap).map(([key, value]) => [key, `${key} (${value})`])
   Object.entries(selectedRule).map(([key]) => [key, `${key}`])
 )
 
 const selectedCorrOptions = Object.fromEntries(
-  // Object.entries(qualityMap).map(([key, value]) => [key, `${key} (${value})`])
   Object.entries(corrType).map(([key]) => [key, `${key}`])
 )
 // 计算最终正则表达式
@@ -531,12 +573,12 @@ const waystoneRegex = computed(() => {
   background-color: rgba(0, 128, 0, 0.24);
 }
 .list-container {
-  margin-bottom: 20px;
+  margin-bottom: 10px;
 }
 
 .list-item {
-  padding: 12px;
-  margin: 8px 0;
+  padding: 2px;
+  margin: 4px 0;
   /* border: 1px solid #e5e7eb; */
   border-radius: 4px;
   cursor: pointer;
@@ -544,8 +586,8 @@ const waystoneRegex = computed(() => {
 }
 
 .list-item.selected {
-  background-color: #e0f2fe;
-  border-color: #bae6fd;
+  background-color: #2c3e50;
+  border-color: #34495e;
 }
 
 .text-content {

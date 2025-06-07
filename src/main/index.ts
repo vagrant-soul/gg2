@@ -1,18 +1,18 @@
-import { app, shell, BrowserWindow, ipcMain, Tray, Menu, globalShortcut } from 'electron'
+import { app, shell, BrowserWindow, ipcMain, Tray, Menu, globalShortcut, clipboard } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
-// import icon from '../../resources/icon.png?asset'
-// 新增部分
 import fs from 'fs'
 import path from 'path'
+import https from 'https'
 import { buttonContents } from './config/ButtonContentProvider'
-// 引入需要的组件
+
 import { OverlayController, OVERLAY_WINDOW_OPTS } from 'electron-overlay-window'
 import { uIOhook, UiohookKey as Key } from 'uiohook-napi'
 //
 app.disableHardwareAcceleration()
 // 启动 uIOhook 监听
 uIOhook.start()
+// 定义全局快捷键
 const toggleMouseKey = 'CmdOrCtrl + J'
 // const toggleShowKey = 'CmdOrCtrl + K'
 let mainWindow: BrowserWindow
@@ -23,7 +23,6 @@ function createTray(window: BrowserWindow): void {
   // 替换为你的托盘图标路径，确保图标存在
   const trayIconPath = join(__dirname, '../../resources/icon.png')
   tray = new Tray(trayIconPath)
-
   const contextMenu = Menu.buildFromTemplate([
     {
       label: '显示窗口',
@@ -51,17 +50,34 @@ function createTray(window: BrowserWindow): void {
     }
   })
 }
+// 左侧菜单的数据获取
 ipcMain.handle('get-button-contents', async () => {
   const jsonPath = path.join(app.getPath('userData'), 'buttonContents.json')
   const data = fs.readFileSync(jsonPath, 'utf-8')
   return JSON.parse(data)
 })
+// 获取版本信息,cnb上的一个文本文件 6.8新增,同时增加了http的导入,其他没变,有错误可以删掉
+ipcMain.handle('get-version-info', async () => {
+  return new Promise((resolve, reject) => {
+    const url = 'https://cnb.cool/vagrant_soul/poe2-app-update/-/git/raw/main/newversion.txt'
+    https
+      .get(url, (res) => {
+        let data = ''
+        res.on('data', (chunk) => {
+          data += chunk
+        })
+        res.on('end', () => {
+          resolve(data)
+        })
+      })
+      .on('error', (error) => {
+        reject(error)
+      })
+  })
+})
 function createWindow(): void {
   // Create the browser window.
   mainWindow = new BrowserWindow({
-    width: 1027,
-    height: 1000,
-
     autoHideMenuBar: true,
     ...OVERLAY_WINDOW_OPTS,
     webPreferences: {
@@ -69,18 +85,16 @@ function createWindow(): void {
       sandbox: false
     }
   })
-  // 打开开发者工具 会强制显示窗口
+  // 打开开发者工具
   // mainWindow.webContents.openDevTools()
-  // 在 createWindow 函数中添加文件检查逻辑
+
+  // 定义json文件
   const jsonPath = path.join(app.getPath('userData'), 'buttonContents.json')
 
   // 检查文件是否存在，不存在则创建
   if (!fs.existsSync(jsonPath)) {
     fs.writeFileSync(jsonPath, JSON.stringify(buttonContents, null, 2))
   }
-  // mainWindow.on('ready-to-show', () => {
-  //   mainWindow.show()
-  // })
 
   mainWindow.webContents.setWindowOpenHandler((details) => {
     shell.openExternal(details.url)
@@ -95,20 +109,25 @@ function createWindow(): void {
     mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
   }
 
-  // 附着窗口
-  OverlayController.attachByTitle(mainWindow, 'demo.txt - Notepad')
+  // 附着窗口 测试用记事本
+  // OverlayController.attachByTitle(mainWindow, 'demo.txt - Notepad')
+  OverlayController.attachByTitle(mainWindow, 'Path of Exile 2')
 
-  OverlayController.events.on('attach', () => {
+  // 定义一个公共函数，用于处理 attach 和 focus 事件
+  const handleAttachOrFocus = (): void => {
     setTimeout(() => {
       if (!mainWindow.isDestroyed()) {
         mainWindow.hide()
-        // mainWindow.setSkipTaskbar(true)
       }
     }, 100) // 100ms 延迟确保覆盖窗口完成初始化,这里不加延时,整个窗口就会一直显示
-  })
-  // todo  虽然整个逻辑好像没问题,但是总感觉哪里不对,需要在重新梳理一遍
-  // todo 明天还需要详细完善一下并理解整个代码的运行逻辑
-  // 按照ai推荐,有一些监听需要在推出时候处理,暂时还没弄好,先这样吧
+  }
+
+  // 监听 attach 事件
+  OverlayController.events.on('attach', handleAttachOrFocus)
+
+  // 监听 focus 事件
+  OverlayController.events.on('focus', handleAttachOrFocus)
+
   makeDemoInteractive()
   LogOverlayEventCalls()
   // 创建托盘
@@ -162,7 +181,7 @@ function LogOverlayEventCalls(): void {
     console.log('focus event emitted ')
   })
 }
-//-----------------------------
+// 切换游戏窗口和软件窗口
 function makeDemoInteractive(): void {
   let isInteractable = false
 
@@ -196,7 +215,7 @@ function makeDemoInteractive(): void {
 
   globalShortcut.register(toggleMouseKey, toggleOverlayState)
 
-  // 新增监听
+  // 查询按钮的点击事件
   ipcMain.on('ping', () => {
     isInteractable = true
     OverlayController.focusTarget()
@@ -206,7 +225,17 @@ function makeDemoInteractive(): void {
       }
     }, 200) // 300ms 延时
     // mainWindow.webContents.send('focus-change', false)
-    uIOhook.keyTap(Key.F, [Key.Ctrl])
+    setTimeout(() => {
+      uIOhook.keyTap(Key.F, [Key.Ctrl])
+      // 这里加延时是因为游戏里面需要,否则太快了,游戏会识别不到,暂时这样解决
+    }, 100)
+    const clipboardText = clipboard.readText()
+    console.log('Clipboard text:', clipboardText)
+    // 添加 100ms 延时后执行 Ctrl+V 操作
+    setTimeout(() => {
+      uIOhook.keyTap(Key.V, [Key.Ctrl])
+      // console.log('Ctrl+V 操作已执行')
+    }, 100)
     console.log('the hotkey is pressed ')
   })
 }

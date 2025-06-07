@@ -5,18 +5,29 @@
       <n-flex align="start" justify="space-between" style="width: 100%">
         <n-flex vertical size="medium" style="width: 240px">
           <!-- 查询按钮 - 上方单独一行 -->
-          <n-button type="primary" block size="large" style="height: 64px; margin-bottom: 8px">
-            查询
-          </n-button>
+          <n-button type="primary" block size="large" strong style="height: 40px"> 搜索 </n-button>
           <!-- 重置和收藏按钮 - 下方并列一行 -->
           <n-flex justify="space-between" align="center">
-            <n-button type="error" style="flex: 1; margin-right: 8px; height: 40px">
+            <n-button type="error" style="flex: 1; margin-right: 8px; height: 30px">
               重置
             </n-button>
-            <n-button type="warning" style="flex: 1; height: 40px"> 收藏 </n-button>
+            <n-button type="warning" style="flex: 1; height: 30px"> 收藏 </n-button>
           </n-flex>
         </n-flex>
-        <n-card hoverable style="flex: 1; height: 120px" embedded> {{ WaystoneResult }} </n-card>
+        <n-card hoverable style="flex: 1; height: 90px" embedded>
+          {{ WaystoneResult }}
+          <!-- 显示字符数区域 -->
+          <div
+            :style="{
+              color: WaystoneResult.length > 50 ? 'red' : 'inherit',
+              position: 'absolute',
+              right: '10px',
+              bottom: '10px'
+            }"
+          >
+            当前字符数: {{ WaystoneResult.length }}/50
+          </div>
+        </n-card>
       </n-flex>
       <!-- Result结束部分 -->
       <!-- Topcard开始部分 -->
@@ -124,7 +135,7 @@
                 clearable
                 placeholder="输入前缀内容"
                 style="margin-bottom: 16px"
-                @input="prefixSearch"
+                @input="prefixInput"
               />
               <n-scrollbar class="scrollable-list">
                 <n-list style="flex: 1">
@@ -156,7 +167,7 @@
                 clearable
                 placeholder="输入后缀内容"
                 style="margin-bottom: 16px"
-                @input="suffixSearch"
+                @input="suffixInput"
               />
               <n-scrollbar class="scrollable-list">
                 <n-list style="flex: 1">
@@ -184,6 +195,25 @@
 </template>
 
 <script setup lang="ts">
+// ... 已有代码 ...
+import * as OpenCC from 'opencc-js'
+
+// 初始化 OpenCC 实例，设置从简体转换为繁体
+const converter = OpenCC.Converter({ from: 'cn', to: 'tw' })
+
+// 处理输入事件
+const suffixInput = async (value: string): Promise<void> => {
+  const convertedText = await converter(value)
+  suffixKeyword.value = convertedText
+  suffixSearch()
+}
+// 处理输入事件
+const prefixInput = async (value: string): Promise<void> => {
+  const convertedText = await converter(value)
+  prefixKeyword.value = convertedText
+  prefixSearch()
+}
+
 //result部分的导入
 import { NCard, NButton, NFlex, NLayout } from 'naive-ui'
 //topcard部分的导入

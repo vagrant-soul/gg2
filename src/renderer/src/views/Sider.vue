@@ -1,36 +1,104 @@
 <template>
-  <n-collapse arrow-placement="right" :default-expanded-names="['1']">
-    <n-collapse-item title="地图正则" name="1">
+  <n-collapse arrow-placement="right" :default-expanded-names="['1']" class="custom-collapse">
+    <n-collapse-item name="1">
+      <!-- 使用 #header 插槽自定义标题内容 -->
+      <template #header>
+        <!-- 图片路径根据实际情况修改 -->
+        <img
+          src="../assets/electron.svg"
+          alt="title icon"
+          style="width: 20px; height: 20px; margin-right: 8px"
+        />
+        <span>地图正则</span>
+      </template>
       <n-flex vertical size="medium">
         <n-flex v-for="(row, rowIndex) in chunkedwaystoneContents" :key="rowIndex" size="medium">
-          <n-button v-for="(button, colIndex) in row" :key="colIndex">
+          <n-button
+            v-for="(button, colIndex) in row"
+            :key="colIndex"
+            ghost
+            type="info"
+            class="content-button"
+            @click="handleButtonClick(button.value)"
+          >
             {{ button.name }}
           </n-button>
         </n-flex>
       </n-flex>
     </n-collapse-item>
-    <n-collapse-item title="碑牌正则" name="2">
+    <n-collapse-item name="2">
+      <!-- 使用 #header 插槽自定义标题内容 -->
+      <template #header>
+        <!-- 图片路径根据实际情况修改 -->
+        <img
+          src="../assets/electron.svg"
+          alt="title icon"
+          style="width: 20px; height: 20px; margin-right: 8px"
+        />
+        <span>碑牌正则</span>
+      </template>
       <n-flex vertical size="medium">
         <n-flex v-for="(row, rowIndex) in chunkedTableContents" :key="rowIndex" size="medium">
-          <n-button v-for="(button, colIndex) in row" :key="colIndex">
+          <n-button
+            v-for="(button, colIndex) in row"
+            :key="colIndex"
+            ghost
+            type="info"
+            class="content-button"
+            @click="handleButtonClick(button.value)"
+          >
             {{ button.name }}
           </n-button>
         </n-flex>
       </n-flex>
     </n-collapse-item>
-    <n-collapse-item title="圣物正则" name="3">
+    <n-collapse-item name="3">
+      <!-- 使用 #header 插槽自定义标题内容 -->
+      <template #header>
+        <!-- 图片路径根据实际情况修改 -->
+        <img
+          src="../assets/electron.svg"
+          alt="title icon"
+          style="width: 20px; height: 20px; margin-right: 8px"
+        />
+        <span>圣物正则</span>
+      </template>
       <n-flex vertical size="medium">
         <n-flex v-for="(row, rowIndex) in chunkedrelicContents" :key="rowIndex" size="medium">
-          <n-button v-for="(button, colIndex) in row" :key="colIndex">
+          <n-button
+            v-for="(button, colIndex) in row"
+            :key="colIndex"
+            ghost
+            type="info"
+            class="content-button"
+            @click="handleButtonClick(button.value)"
+          >
             {{ button.name }}
           </n-button>
         </n-flex>
       </n-flex>
     </n-collapse-item>
-    <n-collapse-item title="商店正则" name="4">
+    <n-collapse-item name="4">
+      <!-- 使用 #header 插槽自定义标题内容 -->
+      <template #header>
+        <!-- 图片路径根据实际情况修改 -->
+        <img
+          src="../assets/electron.svg"
+          alt="title icon"
+          style="width: 20px; height: 20px; margin-right: 8px"
+        />
+        <span>碑牌正则</span>
+      </template>
       <n-flex vertical size="medium">
         <n-flex v-for="(row, rowIndex) in chunkedvendorContents" :key="rowIndex" size="medium">
-          <n-button v-for="(button, colIndex) in row" :key="colIndex">
+          <n-button
+            v-for="(button, colIndex) in row"
+            :key="colIndex"
+            ghost
+            type="info"
+            class="content-button"
+            @click="handleButtonClick(button.value)"
+          >
             {{ button.name }}
           </n-button>
         </n-flex>
@@ -42,6 +110,7 @@
 <script setup lang="ts">
 import { NCollapse, NCollapseItem, NFlex, NButton } from 'naive-ui'
 import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { useClipboard } from '@vueuse/core'
 
 interface ButtonContent {
   name: string
@@ -94,4 +163,34 @@ onMounted(async () => {
   })
   await loadButtonContents()
 })
+// 引入 useClipboard
+const { copy } = useClipboard()
+
+// 处理按钮点击事件
+const handleButtonClick = async (value: string): Promise<void> => {
+  try {
+    // 复制值到剪贴板
+    await copy(value)
+    console.log('值已复制到剪贴板')
+    // 发送 ping 事件
+    window.electron.ipcRenderer.send('ping')
+    console.log('ping 事件已发送')
+  } catch (error) {
+    console.error('复制值或发送 ping 事件出错:', error)
+  }
+}
 </script>
+<style scoped>
+.custom-collapse {
+  padding-left: 16px; /* 折叠组件左右间距 */
+  padding-right: 16px; /* 可根据实际需求调整右边距 */
+}
+
+.content-button {
+  /* 按钮相关的样式 */
+  width: 115px; /* 固定按钮宽度，可按需调整 */
+  overflow: hidden; /* 隐藏溢出内容 */
+  text-overflow: ellipsis; /* 多余文字用省略号显示 */
+  white-space: nowrap; /* 文本不换行 */
+}
+</style>

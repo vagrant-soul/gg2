@@ -5,11 +5,31 @@ import icon from '../../resources/icon.png?asset'
 // 新增部分
 import fs from 'fs'
 import path from 'path'
+import https from 'https'
 import { buttonContents } from './config/ButtonContentProvider'
 ipcMain.handle('get-button-contents', async () => {
   const jsonPath = path.join(app.getPath('userData'), 'buttonContents.json')
   const data = fs.readFileSync(jsonPath, 'utf-8')
   return JSON.parse(data)
+})
+// 处理获取版本信息的 IPC 请求
+ipcMain.handle('get-version-info', async () => {
+  return new Promise((resolve, reject) => {
+    const url = 'https://cnb.cool/vagrant_soul/poe2-app-update/-/git/raw/main/newversion.txt'
+    https
+      .get(url, (res) => {
+        let data = ''
+        res.on('data', (chunk) => {
+          data += chunk
+        })
+        res.on('end', () => {
+          resolve(data)
+        })
+      })
+      .on('error', (error) => {
+        reject(error)
+      })
+  })
 })
 function createWindow(): void {
   // Create the browser window.
@@ -21,7 +41,11 @@ function createWindow(): void {
     ...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
-      sandbox: false
+      sandbox: false,
+      // 设置 CSP 策略，允许连接到指定域名
+      ...({ contentSecurityPolicy: "default-src 'self'; connect-src 'self' https://cnb.cool" } as {
+        contentSecurityPolicy: string
+      })
     }
   })
   // 打开开发者工具
